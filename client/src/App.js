@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+
 const ScheduleComponent = () => {
   const [selectedDay, setSelectedDay] = useState(null);
   const [selectedWeek, setSelectedWeek] = useState(null);
@@ -15,7 +17,7 @@ const ScheduleComponent = () => {
 
   const fetchExercises = async (day, week) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/exercises?day=${day}&week=${week}`);
+      const response = await fetch(`${API_URL}/api/exercises?day=${day}&week=${week}`);
       if (!response.ok) throw new Error('Failed to fetch exercises');
       const data = await response.json();
       setWorkoutData(data);
@@ -37,7 +39,7 @@ const ScheduleComponent = () => {
 
   const handleWeightChange = async (id, weight) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/exercises/${id}`, {
+      const response = await fetch(`${API_URL}/api/exercises/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ weight: weight === '' ? null : weight })
