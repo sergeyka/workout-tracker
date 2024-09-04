@@ -1,0 +1,43 @@
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "5001:5001"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=tracker
+      - DB_PASSWORD=tracker
+      - DB_NAME=tracker
+    depends_on:
+      - postgres
+    volumes:
+      - ./backend:/usr/src/app
+      - /usr/src/app/node_modules
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/usr/src/app
+      - /usr/src/app/node_modules
+    env_file:
+      - .env
+
+  postgres:
+    image: postgres:15
+    volumes:
+      - wo_tracker:/var/lib/postgresql/data
+      - ./data:/data
+    ports:
+      - "15432:5432"
+    env_file:
+      - .env
+
+
+volumes:
+  wo_tracker:

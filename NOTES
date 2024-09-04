@@ -1,0 +1,12 @@
+[] 500 error adding exercise to a day when it's already there
+
+ - run digest, start a new chat. Next thing: delete is not working. Make it sending only day_exercise_id to delete.
+ - React Query: While not directly managing the relationships, React Query can significantly simplify data fetching,
+   caching, and state management on the client side. It could help with efficiently managing the exercise data in the React application.
+   https://tanstack.com/query/latest/docs/framework/react/overview
+  - COMES DOWN TO OVERCOMPLICATING
+
+ - when deleting ex, it has to reload the exes, because they have to get renumbered, otherwise it can be 1,2,3,5
+
+  - https://medium.com/codex/how-to-implement-a-simple-drag-and-drop-using-create-react-app-and-react-beautiful-dnd-4e6e57a2299f
+  INFINITE ERRORS TRYING TO IMPLEMENT WITH CLAUDE

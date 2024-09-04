@@ -1,0 +1,13 @@
+.git
+.idea
+node_modules/*
+client/node_modules/*
+.env
+client/.env
+.gitignore
+.rsyncignore
+codebase.md
+deploy.sh
+package-lock.json
+client/package-lock.json
+compose.yaml
