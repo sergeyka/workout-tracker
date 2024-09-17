@@ -33,7 +33,11 @@ router.get('/search', async (req, res) => {
 // GET all exercises
 router.get('/', async (req, res) => {
   const exerciseRepository = AppDataSource.getRepository(Exercise);
-  const exercises = await exerciseRepository.find();
+  const exercises = await exerciseRepository.find({
+    order: {
+      id: 'ASC'
+    }
+  });
   res.json(exercises);
 });
 
@@ -92,11 +96,14 @@ router.put('/:id', async (req, res) => {
   if (!exercise) {
     return res.status(404).json({ message: 'Exercise not found' });
   }
-  exerciseRepository.merge(exercise, req.body);
-  console.log(req.body);
-  const result = await exerciseRepository.save(exercise);
-  console.log(result);
-  res.json(result);
+  try {
+    exerciseRepository.merge(exercise, req.body);
+    const result = await exerciseRepository.save(exercise);
+    res.json(result);
+  } catch (error) {
+    console.error('Error updating exercise:', error);
+    res.status(500).json({ message: 'Error updating exercise' });
+  }
 });
 
 // DELETE exercise from a day
@@ -112,7 +119,30 @@ router.delete('/:id/day/:dayId', async (req, res) => {
   res.json({ message: 'Exercise removed from day successfully' });
 });
 
+// DELETE exercise
+router.delete('/:id', async (req, res) => {
+  const exerciseRepository = AppDataSource.getRepository(Exercise);
+  const daysExercisesRepository = AppDataSource.getRepository(DaysExercises);
 
+  try {
+    const exerciseId = parseInt(req.params.id);
+
+    // First, delete all associated entries in DaysExercises
+    await daysExercisesRepository.delete({ exercise_id: exerciseId });
+
+    // Then, delete the exercise
+    const result = await exerciseRepository.delete(exerciseId);
+
+    if (result.affected === 0) {
+      return res.status(404).json({ message: 'Exercise not found' });
+    }
+
+    res.json({ message: 'Exercise deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting exercise:', error);
+    res.status(500).json({ message: 'Error deleting exercise' });
+  }
+});
 
 // PUT update exercise order
 router.put('/:id/order', async (req, res) => {

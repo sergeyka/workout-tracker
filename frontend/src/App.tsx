@@ -5,6 +5,7 @@ import DayView from './DayView';
 import SearchDialog from './SearchDialog';
 import {Day, DayExerciseDetails, NewDayExercise} from './types';
 import './App.css';
+import ExercisesScreen from './ExercisesScreen';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -12,6 +13,7 @@ const App: React.FC = () => {
     const [selectedDay, setSelectedDay] = useState<Day | null>(null);
     const [exercises, setExercises] = useState<DayExerciseDetails[]>([]);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [currentScreen, setCurrentScreen] = useState<'schedule' | 'day' | 'exercises'>('schedule');
 
     const loadExercises = useCallback(async (dayId: number) => {
         try {
@@ -92,7 +94,23 @@ const App: React.FC = () => {
 
     return (
         <div className="bg-gray-900 text-white min-h-screen font-sans flex flex-col">
-            {selectedDay ? (
+            {currentScreen === 'schedule' && (
+                <>
+                    <WeekView onDaySelect={(day) => {
+                        setSelectedDay(day);
+                        setCurrentScreen('day');
+                    }} />
+                    <div className="p-4 bg-gray-800">
+                        <button
+                            onClick={() => setCurrentScreen('exercises')}
+                            className="bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 transition-colors"
+                        >
+                            View All Exercises
+                        </button>
+                    </div>
+                </>
+            )}
+            {currentScreen === 'day' && selectedDay && (
                 <>
                     <div className="flex-grow overflow-y-auto">
                         <DayView
@@ -106,7 +124,7 @@ const App: React.FC = () => {
                     <div className="p-4 bg-gray-800">
                         <div className="flex justify-between">
                             <button
-                                onClick={handleBackToSchedule}
+                                onClick={() => setCurrentScreen('schedule')}
                                 className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors"
                             >
                                 ← Back to Schedule
@@ -120,8 +138,21 @@ const App: React.FC = () => {
                         </div>
                     </div>
                 </>
-            ) : (
-                <WeekView onDaySelect={handleDaySelect}/>
+            )}
+            {currentScreen === 'exercises' && (
+                <div className="flex flex-col h-screen">
+                    <div className="flex-grow overflow-y-auto">
+                        <ExercisesScreen />
+                    </div>
+                    <div className="p-4 bg-gray-800">
+                        <button
+                            onClick={() => setCurrentScreen('schedule')}
+                            className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors"
+                        >
+                            Back to Schedule
+                        </button>
+                    </div>
+                </div>
             )}
             {selectedDay && (
                 <SearchDialog
