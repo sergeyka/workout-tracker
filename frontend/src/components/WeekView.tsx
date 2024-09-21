@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Day } from './types';
-
-const API_URL = process.env.REACT_APP_API_URL; // || 'http://localhost:5001/api';
+import { Day } from '../types';
+import * as api from '../services/api';
 
 interface WeekViewProps {
   onDaySelect: (day: Day) => void;
@@ -14,7 +12,7 @@ const WeekView: React.FC<WeekViewProps> = ({ onDaySelect }) => {
   useEffect(() => {
     const loadDays = async () => {
       try {
-        const response = await axios.get<Day[]>(`${API_URL}/days`);
+        const response = await api.getDays();
         setDays(response.data);
       } catch (error) {
         console.error('Error loading days:', error);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Exercise } from './types';
+import { Exercise } from '../types';
 
 interface EditExerciseDialogProps {
   exercise: Exercise;

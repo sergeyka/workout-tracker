@@ -1,15 +1,13 @@
-import React, {useState, useEffect, useCallback} from 'react';
-import axios from 'axios';
-import WeekView from './WeekView';
-import DayView from './DayView';
-import SearchDialog from './SearchDialog';
-import {Day, DayExerciseDetails, NewDayExercise} from './types';
+import React, { useState, useEffect, useCallback } from 'react';
+import { WeekView, DayView, SearchDialog, ExercisesScreen, AuthForm } from './components';
+import { Day, DayExerciseDetails, NewDayExercise } from './types';
 import './App.css';
-import ExercisesScreen from './ExercisesScreen';
-
-const API_URL = process.env.REACT_APP_API_URL;
+import * as api from './services/api';
+import { supabase } from './supabaseClient';
+import { User } from '@supabase/supabase-js';
 
 const App: React.FC = () => {
+    const [user, setUser] = useState<User | null>(null);
     const [selectedDay, setSelectedDay] = useState<Day | null>(null);
     const [exercises, setExercises] = useState<DayExerciseDetails[]>([]);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -17,7 +15,7 @@ const App: React.FC = () => {
 
     const loadExercises = useCallback(async (dayId: number) => {
         try {
-            const response = await axios.get<DayExerciseDetails[]>(`${API_URL}/days/${dayId}/exercises`);
+            const response = await api.getDayExercises(dayId);
             setExercises(response.data);
         } catch (error) {
             console.error('Error loading exercises:', error);
@@ -48,7 +46,7 @@ const App: React.FC = () => {
 
     const handleAddExercise = async (newExercise: NewDayExercise) => {
         try {
-            await axios.post(`${API_URL}/days/${newExercise.day_id}/exercises`, newExercise);
+            await api.addExerciseToDay(newExercise);
             if (selectedDay) {
                 loadExercises(selectedDay.id);
             }
@@ -60,7 +58,7 @@ const App: React.FC = () => {
 
     const handleDeleteExercise = async (dayExerciseId: number) => {
         try {
-            await axios.delete(`${API_URL}/dayExercises/${dayExerciseId}`);
+            await api.deleteDayExercise(dayExerciseId);
             if (selectedDay) {
                 loadExercises(selectedDay.id);
             }
@@ -71,7 +69,7 @@ const App: React.FC = () => {
 
     const handleWeightUpdate = useCallback(async (exerciseId: number, newWeight: number | null): Promise<void> => {
         try {
-            await axios.put(`${API_URL}/exercises/${exerciseId}`, {weight: newWeight});
+            await api.updateExerciseWeight(exerciseId, newWeight);
             setExercises(prevExercises =>
                 prevExercises.map(exercise =>
                     exercise.id === exerciseId ? {...exercise, weight: newWeight} : exercise
@@ -79,21 +77,45 @@ const App: React.FC = () => {
             );
         } catch (error) {
             console.error('Error updating weight:', error);
-            throw error; // Rethrow the error so the WeightInput component can handle it
+            throw error;
         }
     }, []);
 
     const handleExercisesReorder = useCallback(async (reorderedExercises: DayExerciseDetails[]) => {
         try {
             setExercises(reorderedExercises);
-            await axios.put(`${API_URL}/days/${selectedDay?.id}/exercises/reorder`, reorderedExercises);
+            if (selectedDay) {
+                await api.reorderExercises(selectedDay.id, reorderedExercises.map((exercise, index) => ({
+                    id: exercise.dayExerciseId,
+                    order: index + 1
+                })));
+            }
         } catch (error) {
             console.error('Error reordering exercises:', error);
         }
     }, [selectedDay]);
 
+    useEffect(() => {
+        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+            setUser(session?.user || null);
+        });
+
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setUser(session?.user || null);
+        });
+
+        return () => {
+            authListener.subscription.unsubscribe();
+        };
+    }, []);
+
+    if (!user) {
+        return <AuthForm />;
+    }
+
     return (
         <div className="bg-gray-900 text-white min-h-screen font-sans flex flex-col">
+            <AuthForm />
             {currentScreen === 'schedule' && (
                 <>
                     <WeekView onDaySelect={(day) => {

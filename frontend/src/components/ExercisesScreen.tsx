@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
-import { Exercise } from './types';
+import { Exercise } from '../types';
 import WeightInput from './WeightInput';
 import EditExerciseDialog from './EditExerciseDialog';
-
-const API_URL = process.env.REACT_APP_API_URL;
+import * as api from '../services/api';
 
 const ExercisesScreen: React.FC = () => {
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -19,8 +17,8 @@ const ExercisesScreen: React.FC = () => {
 
   const fetchExercises = async () => {
     try {
-      const response = await axios.get<Exercise[]>(`${API_URL}/exercises`);
-      setExercises(response.data);
+      const exercises = await api.getAllExercises();
+      setExercises(exercises);
     } catch (error) {
       console.error('Error fetching exercises:', error);
     }
@@ -28,7 +26,7 @@ const ExercisesScreen: React.FC = () => {
 
   const handleNameChange = async (exerciseId: number, newName: string) => {
     try {
-      await axios.put(`${API_URL}/exercises/${exerciseId}`, { name: newName });
+      await api.updateExercise(exerciseId, { name: newName });
       setExercises(exercises.map(ex => ex.id === exerciseId ? { ...ex, name: newName } : ex));
       setEditingExercise(null);
     } catch (error) {
@@ -38,7 +36,7 @@ const ExercisesScreen: React.FC = () => {
 
   const handleWeightUpdate = async (exerciseId: number, newWeight: number | null) => {
     try {
-      await axios.put(`${API_URL}/exercises/${exerciseId}`, { weight: newWeight });
+      await api.updateExercise(exerciseId, { weight: newWeight });
       setExercises(exercises.map(ex => ex.id === exerciseId ? { ...ex, weight: newWeight } : ex));
     } catch (error) {
       console.error('Error updating exercise weight:', error);
@@ -47,7 +45,7 @@ const ExercisesScreen: React.FC = () => {
 
   const handleDeleteExercise = async (exerciseId: number) => {
     try {
-      await axios.delete(`${API_URL}/exercises/${exerciseId}`);
+      await api.deleteExercise(exerciseId);
       setExercises(exercises.filter(ex => ex.id !== exerciseId));
       setSwipedExerciseId(null);
     } catch (error) {
@@ -62,7 +60,7 @@ const ExercisesScreen: React.FC = () => {
 
   const handleSaveEdit = async (exerciseId: number, newName: string) => {
     try {
-      await axios.put(`${API_URL}/exercises/${exerciseId}`, { name: newName });
+      await api.updateExercise(exerciseId, { name: newName });
       setExercises(exercises.map(ex => ex.id === exerciseId ? { ...ex, name: newName } : ex));
       setEditingExercise(null);
     } catch (error) {

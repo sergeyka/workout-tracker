@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import WeightInput from "./WeightInput";
-import { Day, DayExerciseDetails } from './types';
+import { Day, DayExerciseDetails } from '../types';
 
 interface DayViewProps {
   day: Day;

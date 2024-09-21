@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
 import debounce from 'lodash/debounce';
-import { Exercise, NewDayExercise } from './types';
+import { Exercise, NewDayExercise } from '../types';
+import * as api from '../services/api';
+
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -25,13 +26,13 @@ const SearchDialog: React.FC<SearchDialogProps> = ({ isOpen, onClose, onAddExerc
 
       const fetchResults = async () => {
         try {
-          const response = await axios.get<Exercise[]>(`${API_URL}/exercises/search?query=${term}`);
-          setSearchResults(response.data);
+          const exercises = await api.searchExercises(term);
+          setSearchResults(exercises);
         } catch (error) {
           console.error('Error searching exercises:', error);
         }
       };
-
+      
       fetchResults();
     },
     []
@@ -56,10 +57,10 @@ const SearchDialog: React.FC<SearchDialogProps> = ({ isOpen, onClose, onAddExerc
 
   const handleAddNewExercise = async () => {
     try {
-      const response = await axios.post<Exercise>(`${API_URL}/exercises`, { name: searchTerm });
+      const exercise = await api.createExercise({ name: searchTerm });
       const newDayExercise: NewDayExercise = {
         day_id: currentDayId,
-        exercise_id: response.data.id
+        exercise_id: exercise.id
       };
       onAddExercise(newDayExercise);
       onClose();

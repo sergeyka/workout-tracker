@@ -77,7 +77,7 @@ router.put('/:id/exercises/reorder', async (req, res) => {
       // Step 1: Assign temporary order values
       for (let i = 0; i < reorderedExercises.length; i++) {
         await transactionalEntityManager.update(DaysExercises,
-          { day_id: dayId, exercise_id: reorderedExercises[i].id },
+          { id: reorderedExercises[i].id },
           { exercise_order: -1 * (i + 1) } // Temporary negative values
         );
       }
@@ -85,12 +85,13 @@ router.put('/:id/exercises/reorder', async (req, res) => {
       // Step 2: Assign final order values
       for (let i = 0; i < reorderedExercises.length; i++) {
         await transactionalEntityManager.update(DaysExercises,
-          { day_id: dayId, exercise_id: reorderedExercises[i].id },
-          { exercise_order: i + 1 }
-        ); 
+          { id: reorderedExercises[i].id },
+          { exercise_order: reorderedExercises[i].order} 
+        );
       }
     });
 
+    console.log('Exercises reordered successfully');
     res.json({ message: 'Exercises reordered successfully' });
   } catch (error) {
     console.error('Error reordering exercises:', error);
