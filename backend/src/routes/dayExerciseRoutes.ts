@@ -1,17 +1,19 @@
 import { Router } from 'express';
 import { AppDataSource } from '../data-source';
 import { DaysExercises } from '../entities';
+import { AuthenticatedRequest } from '../middleware/auth';
 
 const router = Router();
 
-router.delete('/:dayExerciseId', async (req, res) => {
+router.delete('/:dayExerciseId', async (req: AuthenticatedRequest, res) => {
   const dayExerciseId = parseInt(req.params.dayExerciseId);
+  const user_id = req.authenticatedUser?.id;
 
   const daysExercisesRepository = AppDataSource.getRepository(DaysExercises);
 
   try {
     const dayExercise = await daysExercisesRepository.findOne({
-      where: { id: dayExerciseId },
+      where: { id: dayExerciseId, user_id },
       relations: ['day']
     });
 
@@ -25,7 +27,7 @@ router.delete('/:dayExerciseId', async (req, res) => {
 
     // Reorder remaining exercises
     const remainingExercises = await daysExercisesRepository.find({
-      where: { day_id: dayId },
+      where: { day_id: dayId, user_id },
       order: { exercise_order: 'ASC' }
     });
 

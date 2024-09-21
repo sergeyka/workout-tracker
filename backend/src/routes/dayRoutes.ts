@@ -1,19 +1,26 @@
 import { Router } from 'express';
 import { AppDataSource } from '../data-source';
 import { Day, Exercise, DaysExercises } from '../entities';
+import { AuthenticatedRequest } from '../middleware/auth';
 
 const router = Router();
 
-router.get('/', async (req, res) => {
+router.get('/', async (req: AuthenticatedRequest, res) => {
   const dayRepository = AppDataSource.getRepository(Day);
-  const days = await dayRepository.find({ order: { week: 'ASC', day_of_week: 'ASC' } });
+  const days = await dayRepository.find({
+    where: { user_id: req.authenticatedUser?.id || '' },
+    order: { week: 'ASC', day_of_week: 'ASC' }
+  });
   res.json(days);
 });
 
-router.get('/:id/exercises', async (req, res) => {
+router.get('/:id/exercises', async (req: AuthenticatedRequest, res) => {
   const daysExercisesRepository = AppDataSource.getRepository(DaysExercises);
   const exercises = await daysExercisesRepository.find({
-    where: { day_id: parseInt(req.params.id) },
+    where: { 
+      user_id: req.authenticatedUser?.id || '',
+      day_id: parseInt(req.params.id),
+    },
     relations: ['exercise'],
     order: { exercise_order: 'ASC' },
   });
@@ -28,17 +35,18 @@ router.get('/:id/exercises', async (req, res) => {
   })));
 });
 
-router.post('/:id/exercises', async (req, res) => {
+router.post('/:id/exercises', async (req: AuthenticatedRequest, res) => {
   const day_id = parseInt(req.params.id);
   const { exercise_id } = req.body;
+  const user_id = req.authenticatedUser?.id;
 
   const dayRepository = AppDataSource.getRepository(Day);
   const exerciseRepository = AppDataSource.getRepository(Exercise);
   const daysExercisesRepository = AppDataSource.getRepository(DaysExercises);
 
   try {
-    const day = await dayRepository.findOne({ where: { id: day_id } });
-    const exercise = await exerciseRepository.findOne({ where: { id: exercise_id } });
+    const day = await dayRepository.findOne({ where: { id: day_id, user_id } });
+    const exercise = await exerciseRepository.findOne({ where: { id: exercise_id, user_id } });
 
     if (!day || !exercise) {
       return res.status(404).json({ message: 'Day or Exercise not found' });
@@ -55,6 +63,7 @@ router.post('/:id/exercises', async (req, res) => {
       day_id,
       exercise_id,
       exercise_order: newOrder,
+      user_id,
     });
 
     await daysExercisesRepository.save(newDaysExercises);
@@ -66,9 +75,10 @@ router.post('/:id/exercises', async (req, res) => {
   }
 });
 
-router.put('/:id/exercises/reorder', async (req, res) => {
+router.put('/:id/exercises/reorder', async (req: AuthenticatedRequest, res) => {
   const dayId = parseInt(req.params.id);
   const reorderedExercises = req.body;
+  const user_id = req.authenticatedUser?.id;
 
   const daysExercisesRepository = AppDataSource.getRepository(DaysExercises);
 
@@ -77,16 +87,16 @@ router.put('/:id/exercises/reorder', async (req, res) => {
       // Step 1: Assign temporary order values
       for (let i = 0; i < reorderedExercises.length; i++) {
         await transactionalEntityManager.update(DaysExercises,
-          { id: reorderedExercises[i].id },
-          { exercise_order: -1 * (i + 1) } // Temporary negative values
+          { id: reorderedExercises[i].id, user_id },
+          { exercise_order: -1 * (i + 1) }
         );
       }
 
       // Step 2: Assign final order values
       for (let i = 0; i < reorderedExercises.length; i++) {
         await transactionalEntityManager.update(DaysExercises,
-          { id: reorderedExercises[i].id },
-          { exercise_order: reorderedExercises[i].order} 
+          { id: reorderedExercises[i].id, user_id },
+          { exercise_order: reorderedExercises[i].order }
         );
       }
     });
@@ -99,9 +109,10 @@ router.put('/:id/exercises/reorder', async (req, res) => {
   }
 });
 
-router.delete('/:dayId/exercises/:exerciseId', async (req, res) => {
+router.delete('/:dayId/exercises/:exerciseId', async (req: AuthenticatedRequest, res) => {
   const day_id = parseInt(req.params.dayId);
   const exercise_id = parseInt(req.params.exerciseId);
+  const user_id = req.authenticatedUser?.id;
 
   const daysExercisesRepository = AppDataSource.getRepository(DaysExercises);
 
@@ -109,6 +120,7 @@ router.delete('/:dayId/exercises/:exerciseId', async (req, res) => {
     const result = await daysExercisesRepository.delete({
       day_id,
       exercise_id,
+      user_id,
     });
 
     if (result.affected === 0) {

@@ -1,16 +1,17 @@
 import { Router } from 'express';
 import { AppDataSource } from '../data-source';
 import { Exercise, DaysExercises } from '../entities';
-import {ILike, Like} from 'typeorm';
-import {setQueryLogging} from "../setQueryLogging";
+import { ILike } from 'typeorm';
+import { setQueryLogging } from "../setQueryLogging";
+import { AuthenticatedRequest } from '../middleware/auth';
 
 const router = Router();
 
-
-
 // GET search exercises
-router.get('/search', async (req, res) => {
+// TODO: exclude exercises that are already in the current day for the user
+router.get('/search', async (req: AuthenticatedRequest, res) => {
   const { query } = req.query;
+  const user_id = req.authenticatedUser?.id;
   const exerciseRepository = AppDataSource.getRepository(Exercise);
   if (typeof query !== 'string' || query.trim() === '') {
     return res.json([]);
@@ -19,10 +20,9 @@ router.get('/search', async (req, res) => {
   try {
     setQueryLogging(AppDataSource, true);
     const exercises = await exerciseRepository.find({
-      where: { name: ILike(`%${query}%`) }
+      where: { name: ILike(`%${query}%`), user_id }
     });
     setQueryLogging(AppDataSource, false);
-    console.log(exercises)
     res.json(exercises);
   } catch (error) {
     console.error('Error searching exercises:', error);
@@ -31,21 +31,23 @@ router.get('/search', async (req, res) => {
 });
 
 // GET all exercises
-router.get('/', async (req, res) => {
+router.get('/', async (req: AuthenticatedRequest, res) => {
+  const user_id = req.authenticatedUser?.id;
   const exerciseRepository = AppDataSource.getRepository(Exercise);
   const exercises = await exerciseRepository.find({
-    order: {
-      id: 'ASC'
-    }
+    where: { user_id },
+    order: { id: 'ASC' }
   });
   res.json(exercises);
 });
 
 // GET single exercise
-router.get('/:id', async (req, res) => {
-
+router.get('/:id', async (req: AuthenticatedRequest, res) => {
+  const user_id = req.authenticatedUser?.id;
   const exerciseRepository = AppDataSource.getRepository(Exercise);
-  const exercise = await exerciseRepository.findOne({ where: { id: parseInt(req.params.id) } });
+  const exercise = await exerciseRepository.findOne({ 
+    where: { id: parseInt(req.params.id), user_id } 
+  });
   if (!exercise) {
     return res.status(404).json({ message: 'Exercise not found' });
   }
@@ -53,7 +55,8 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST new exercise
-router.post('/', async (req, res) => {
+router.post('/', async (req: AuthenticatedRequest, res) => {
+  const user_id = req.authenticatedUser?.id;
   const exerciseRepository = AppDataSource.getRepository(Exercise);
   const daysExercisesRepository = AppDataSource.getRepository(DaysExercises);
 
@@ -61,13 +64,13 @@ router.post('/', async (req, res) => {
     const { name, dayId } = req.body;
 
     // Create new exercise
-    const newExercise = exerciseRepository.create({ name });
+    const newExercise = exerciseRepository.create({ name, user_id });
     const savedExercise = await exerciseRepository.save(newExercise);
 
     if (dayId) {
       // Get the max order for the current day
       const maxOrder = await daysExercisesRepository.createQueryBuilder('de')
-        .where('de.day_id = :dayId', { dayId })
+        .where('de.day_id = :dayId AND de.user_id = :user_id', { dayId, user_id })
         .select('MAX(de.exercise_order)', 'maxOrder')
         .getRawOne();
 
@@ -77,7 +80,8 @@ router.post('/', async (req, res) => {
       const newDaysExercises = daysExercisesRepository.create({
         day_id: dayId,
         exercise_id: savedExercise.id,
-        exercise_order: newOrder
+        exercise_order: newOrder,
+        user_id
       });
       await daysExercisesRepository.save(newDaysExercises);
     }
@@ -90,9 +94,12 @@ router.post('/', async (req, res) => {
 });
 
 // PUT update exercise
-router.put('/:id', async (req, res) => {
+router.put('/:id', async (req: AuthenticatedRequest, res) => {
+  const user_id = req.authenticatedUser?.id;
   const exerciseRepository = AppDataSource.getRepository(Exercise);
-  const exercise = await exerciseRepository.findOne({ where: { id: parseInt(req.params.id) } });
+  const exercise = await exerciseRepository.findOne({ 
+    where: { id: parseInt(req.params.id), user_id } 
+  });
   if (!exercise) {
     return res.status(404).json({ message: 'Exercise not found' });
   }
@@ -107,11 +114,13 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE exercise from a day
-router.delete('/:id/day/:dayId', async (req, res) => {
+router.delete('/:id/day/:dayId', async (req: AuthenticatedRequest, res) => {
+  const user_id = req.authenticatedUser?.id;
   const daysExercisesRepository = AppDataSource.getRepository(DaysExercises);
   const result = await daysExercisesRepository.delete({
     day_id: parseInt(req.params.dayId),
-    exercise_id: parseInt(req.params.id)
+    exercise_id: parseInt(req.params.id),
+    user_id
   });
   if (result.affected === 0) {
     return res.status(404).json({ message: 'Exercise not found for this day' });
@@ -120,7 +129,8 @@ router.delete('/:id/day/:dayId', async (req, res) => {
 });
 
 // DELETE exercise
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', async (req: AuthenticatedRequest, res) => {
+  const user_id = req.authenticatedUser?.id;
   const exerciseRepository = AppDataSource.getRepository(Exercise);
   const daysExercisesRepository = AppDataSource.getRepository(DaysExercises);
 
@@ -128,10 +138,10 @@ router.delete('/:id', async (req, res) => {
     const exerciseId = parseInt(req.params.id);
 
     // First, delete all associated entries in DaysExercises
-    await daysExercisesRepository.delete({ exercise_id: exerciseId });
+    await daysExercisesRepository.delete({ exercise_id: exerciseId, user_id });
 
     // Then, delete the exercise
-    const result = await exerciseRepository.delete(exerciseId);
+    const result = await exerciseRepository.delete({ id: exerciseId, user_id });
 
     if (result.affected === 0) {
       return res.status(404).json({ message: 'Exercise not found' });
@@ -145,9 +155,10 @@ router.delete('/:id', async (req, res) => {
 });
 
 // PUT update exercise order
-router.put('/:id/order', async (req, res) => {
+router.put('/:id/order', async (req: AuthenticatedRequest, res) => {
   const { day_id, newOrder } = req.body;
   const exercise_id = parseInt(req.params.id);
+  const user_id = req.authenticatedUser?.id;
 
   const daysExercisesRepository = AppDataSource.getRepository(DaysExercises);
 
@@ -155,7 +166,8 @@ router.put('/:id/order', async (req, res) => {
     const daysExercise = await daysExercisesRepository.findOne({
       where: {
         day_id,
-        exercise_id
+        exercise_id,
+        user_id
       }
     });
 
@@ -172,6 +184,5 @@ router.put('/:id/order', async (req, res) => {
     res.status(500).json({ message: 'Error updating exercise order' });
   }
 });
-
 
 export default router;
