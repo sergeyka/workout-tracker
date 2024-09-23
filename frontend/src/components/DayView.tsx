@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { DragDropContext, Draggable, DropResult } from 'react-beautiful-dnd';
 import WeightInput from "./WeightInput";
 import { Day, DayExerciseDetails } from '../types';
@@ -20,6 +20,7 @@ const DayView: React.FC<DayViewProps> = ({
   onExercisesReorder
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [swipedExerciseId, setSwipedExerciseId] = useState<number | null>(null);
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) {
@@ -36,8 +37,39 @@ const DayView: React.FC<DayViewProps> = ({
     })));
   };
 
+  const handleTouchStart = (e: React.TouchEvent, exerciseId: number) => {
+    const touch = e.touches[0];
+    (e.target as HTMLElement).dataset.start = touch.clientX.toString();
+    (e.target as HTMLElement).dataset.exerciseId = exerciseId.toString();
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    const start = parseInt((e.target as HTMLElement).dataset.start || '0', 10);
+    const exerciseId = parseInt((e.target as HTMLElement).dataset.exerciseId || '0', 10);
+    const diff = start - touch.clientX;
+
+    if (diff > 50) {
+      setSwipedExerciseId(exerciseId);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    // Do nothing on touch end to keep the submenu open
+  };
+
+  const closeSubmenu = useCallback(() => {
+    setSwipedExerciseId(null);
+  }, []);
+
+  const handleDeleteClick = useCallback((e: React.MouseEvent, dayExerciseId: number) => {
+    e.stopPropagation();
+    onDeleteExercise(dayExerciseId);
+    closeSubmenu();
+  }, [onDeleteExercise, closeSubmenu]);
+
   return (
-    <div className="bg-gray-900 text-white h-full" ref={containerRef}>
+    <div className="bg-gray-900 text-white h-full" ref={containerRef} onClick={closeSubmenu}>
       <div className="p-4">
         <h2 className="text-lg font-semibold mb-4 text-gray-400">Week {day.week}, {day.day_of_week}</h2>
         <DragDropContext onDragEnd={onDragEnd}>
@@ -55,27 +87,45 @@ const DayView: React.FC<DayViewProps> = ({
                         ref={provided.innerRef}
                         {...provided.draggableProps}
                         {...provided.dragHandleProps}
-                        className={`bg-gray-800 py-3 px-4 rounded-sm flex justify-between items-center relative overflow-hidden ${snapshot.isDragging ? 'shadow-lg' : ''}`}
+                        className={`bg-gray-800 rounded-sm flex items-center relative overflow-hidden ${snapshot.isDragging ? 'shadow-lg' : ''}`}
+                        onTouchStart={(e) => handleTouchStart(e, exercise.dayExerciseId)}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={handleTouchEnd}
                       >
-                        <div className="flex-grow">
-                          <span className="text-sm">
-                            <span className="text-xs text-gray-400 ml-2">{exercise.exercise_order}.</span> {exercise.name}
-                          </span>
-                          {exercise.notes && (
-                            <span className="text-xs text-gray-400 ml-2">({exercise.notes})</span>
-                          )}
+                        <div className="flex-grow py-3 px-4 flex justify-between items-center">
+                          <div className="flex-grow">
+                            <span className="text-sm">
+                              <span className="text-xs text-gray-400 mr-2">{exercise.exercise_order}.</span>
+                              {exercise.name}
+                            </span>
+                            {exercise.notes && (
+                              <span className="text-xs text-gray-400 ml-2">({exercise.notes})</span>
+                            )}
+                          </div>
+                          <div className="ml-4 flex items-center">
+                            <WeightInput
+                              exerciseId={exercise.id}
+                              initialWeight={exercise.weight}
+                              onWeightUpdate={onWeightUpdate}
+                            />
+                            <button
+                              onClick={(e) => handleDeleteClick(e, exercise.dayExerciseId)}
+                              className="ml-2 text-red-500 hover:text-red-400 focus:outline-none hidden sm:block"
+                            >
+                              ✕
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex items-center">
-                          <WeightInput
-                            exerciseId={exercise.id}
-                            initialWeight={exercise.weight}
-                            onWeightUpdate={onWeightUpdate}
-                          />
+                        <div 
+                          className={`absolute right-0 top-0 bottom-0 bg-red-500 flex items-center transition-all duration-300 ease-in-out overflow-hidden sm:hidden ${
+                            swipedExerciseId === exercise.dayExerciseId ? 'w-20' : 'w-0'
+                          }`}
+                        >
                           <button
-                            onClick={() => onDeleteExercise(exercise.dayExerciseId)}
-                            className="ml-2 text-red-500 hover:text-red-400 focus:outline-none"
+                            onClick={(e) => handleDeleteClick(e, exercise.dayExerciseId)}
+                            className="w-full h-full flex items-center justify-center text-white whitespace-nowrap"
                           >
-                            ✕
+                            Delete
                           </button>
                         </div>
                       </li>

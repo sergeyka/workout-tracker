@@ -37,13 +37,13 @@ const App: React.FC = () => {
         }
     }, [selectedDay, loadExercises]);
 
-    const handleDaySelect = (day: Day) => {
-        setSelectedDay(day);
-    };
+    // const handleDaySelect = (day: Day) => {
+    //   // Implementation
+    // };
 
-    const handleBackToSchedule = () => {
-        setSelectedDay(null);
-    };
+    // const handleBackToSchedule = () => {
+    //   // Implementation
+    // };
 
     const handleOpenSearch = () => {
         setIsSearchOpen(true);
