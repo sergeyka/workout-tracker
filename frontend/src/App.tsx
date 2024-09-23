@@ -6,6 +6,15 @@ import * as api from './services/api';
 import { supabase } from './supabaseClient';
 import { User } from '@supabase/supabase-js';
 
+// Suppress the specific warning
+const originalConsoleError = console.error;
+console.error = function(...args) {
+  if (args[0].includes('Support for defaultProps will be removed from memo components')) {
+    return;
+  }
+  originalConsoleError.apply(console, args);
+};
+
 const App: React.FC = () => {
     const [user, setUser] = useState<User | null>(null);
     const [selectedDay, setSelectedDay] = useState<Day | null>(null);
