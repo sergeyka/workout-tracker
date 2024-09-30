@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node dist/index.js",
-    "dev": "nodemon --config nodemon.json",
+    "dev": "nodemon --config nodemon.json --debug",
     "build": "tsc",
     "start:prod": "node dist/index.js"
   },
@@ -13,11 +13,14 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@apollo/server": "^4.11.0",
     "@supabase/supabase-js": "^2.45.4",
     "@types/lodash": "^4.17.7",
     "cors": "^2.8.5",
     "dotenv": "^10.0.0",
     "express": "^4.19.2",
+    "graphql": "^16.9.0",
+    "graphql-tag": "^2.12.6",
     "pg": "^8.7.1",
     "reflect-metadata": "^0.1.13",
     "typeorm": "^0.3.0"
