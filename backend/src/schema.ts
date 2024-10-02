@@ -41,6 +41,7 @@ export const typeDefs = gql`
     searchExercises(query: String!): [Exercise!]!
     getAllExercises: [Exercise!]!
     getExercise(id: ID!): Exercise
+    exercises(query: String, id: ID): [Exercise!]!
   }
 
   type Mutation {

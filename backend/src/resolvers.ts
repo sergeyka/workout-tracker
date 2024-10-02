@@ -56,6 +56,27 @@ export const resolvers = {
         where: { id: parseInt(id), user_id: user.id.toString() } 
       });
     },
+
+
+    exercises: async (_: any, { query, id }: { query?: string, id?: string }, { user }: Context, ___: GraphQLResolveInfo) => {
+        const exerciseRepository = AppDataSource.getRepository(Exercise);
+        const whereClause: any = { user_id: user.id.toString() };
+        
+        if (id) {
+          whereClause.id = parseInt(id);
+          return await exerciseRepository.findOne({ where: whereClause });
+        }
+  
+        if (query) {
+          whereClause.name = ILike(`%${query}%`);
+        }
+  
+        return await exerciseRepository.find({
+          where: whereClause,
+          order: { id: 'ASC' }
+        });
+      },
+
   },
   Mutation: {
     addExerciseToDay: async (_: any, { dayId, exerciseId }: { dayId: string, exerciseId: string }, { user }: Context, ___: GraphQLResolveInfo) => {
